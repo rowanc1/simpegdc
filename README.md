@@ -1,3 +1,11 @@
+MOVED TO SimPEG.DCIP
+====================
+
+The latest work will be on the dcip/dev branch:
+
+https://github.com/simpeg/simpeg/tree/dcip/dev
+
+
 simpegdc
 ========
 
