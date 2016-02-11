@@ -768,7 +768,7 @@ def readUBC_DC2DLoc(fileName):
     for ii in range(obsfile.shape[0]):
         
         # If len==3, then simple format where tx-rx is listed on each line
-        if len(line) == 4:
+        if len(line) >= 4:
         
             temp = np.fromstring(obsfile[ii], dtype=float,sep=' ')
             tx_A = np.hstack((tx_A,temp[0]))
@@ -776,6 +776,9 @@ def readUBC_DC2DLoc(fileName):
             rx_M = np.hstack((rx_M,temp[2]))
             rx_N = np.hstack((rx_N,temp[3]))
             
+        if len(line) == 6:
+            d = np.hstack((d,temp[4]))
+            wd = np.hstack((wd,temp[5]))
         
     rx = np.transpose(np.array((rx_M,rx_N)))    
     tx = np.transpose(np.array((tx_A,tx_B)))
@@ -850,4 +853,81 @@ def readUBC_DC2DMesh(fileName):
     from SimPEG import Mesh
     tensMsh = Mesh.TensorMesh([dx,dz],(x0, z0))
     return tensMsh
+
+def xy_2_lineID(x,y):
+    """
+        Read x,y locations and returns a line ID number.
+        Assumes that the locations are listed in the order
+        they were collected. May need to generalize for random
+        point locations, but will be more expensive
+
+        Input:
+        :param x, y Vectors of station location
+
+        Output:
+        :param LineID Vector of integers
+        :return
+        
+        Created on Thu Feb 11, 2015
+
+        @author: dominiquef
+
+    """
+
+    # Compute unit vector between two points
+    def r_unit(xx,yy):
+        dx = xx[1] - xx[0]
+        dy = yy[1] - yy[0]
+
+        dl = np.sum(dx**2. + dy**2.)**0.5
+
+        r = np.r_[dx/dl, dy/dl]
+
+        return r
+
+        nstn = len(x)
+
+    # Pre-allocate space
+    lineID = np.zeros(nstn)
+
+    # Initiate first station
+    xy0 = np.r_[x[0],y[0]]
+
+    # Initiate mid-point location
+    xym = xy0
+
+    linenum = 0
+    indx    = 0  
+
+    for ii in range(nstn-1):
+
+        # Compute vector between neighbours
+        r1 = r_unit(np.r_[x[ii],x[ii+1]],np.r_[y[ii],y[ii+1]])
+
+        # Compute vector between current stn and mid-point
+        r2 = r_unit(np.r_[xym[0],x[ii+1]],np.r_[xym[1],y[ii+1]])
+
+        # Compute vector between current stn and start line
+        r3 = r_unit(np.r_[xy0[0],x[ii+1]],np.r_[xy0[1],y[ii+1]])
+
+        # Compute vector between mid-point and start line
+        r3 = r_unit(np.r_[xym[0],xy0[0]],np.r_[xym[1],xy0[1]])
+
+        # Compute dot product 
+        ang1 = r1.dot(r2)
+        ang2 = r3.dot(r4)
+
+        # If the angles are smaller then 45d, than new line
+        if (ang1 < np.cos(np.pi/4.)) | (ang2 < np.cos(np.pi/4.)) & (ii>0):
+
+            # Re-initiate start and mid-point location
+            xy0 = np.r_[x[ii+1],y[ii+1]]
+            xym = xy0
+
+            linenum += 1
+            indx = ii+1
+            lineID[ii+1] = linenum
+
+        else:
+            xym = np.median(np.c_[x[indx:ii+1],y[indx:ii+1]],axis=0)
 
