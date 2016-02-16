@@ -680,11 +680,12 @@ def readUBC_DC3Dobs(fileName):
     obsfile = np.genfromtxt(fileName,delimiter=' \n',dtype=np.str,comments='!')
     
     # Pre-allocate
-    Tx = []
+    srcLists = []
     Rx = []
     d = []
     wd = []
-    
+    zflag = True # Flag for z value provided
+
     # Countdown for number of obs/tx
     count = 0
     for ii in range(obsfile.shape[0]):
@@ -697,34 +698,45 @@ def readUBC_DC3Dobs(fileName):
     
             temp = (np.fromstring(obsfile[ii], dtype=float,sep=' ').T)
             count = int(temp[-1])
-            temp = np.reshape(temp[0:-1],[2,3]).T
-            
-            Tx.append(temp)
+
+            # Check if z value is provided, if False -> nan
+            if len(temp)==5:
+                tx = np.r_[temp[0:2],np.nan,temp[0:2],np.nan]
+                zflag = False
+
+            else:
+                tx = temp[:-1]
+
             rx = []
             continue
         
         temp = np.fromstring(obsfile[ii], dtype=float,sep=' ')
         
-            
-        rx.append(temp)          
-        
+        if zflag:
+
+            rx.append(temp[:-2])
+            # Check if there is data with the location
+            if len(temp)==8:
+                d.append(temp[-2])
+                wd.append(temp[-1])
+
+        else:    
+            rx.append(np.r_[temp[0:2],np.nan,temp[0:2],np.nan] )   
+            # Check if there is data with the location      
+            if len(temp)==6:
+                d.append(temp[-2])
+                wd.append(temp[-1])
+
         count = count -1        
         
-        # Reach the end of  
+        # Reach the end of transmitter block 
         if count == 0:
-            temp = np.asarray(rx)
-            Rx.append(temp[:,0:6])
+            Rx = DCIP.RxDipole(np.asarray(rx))
+            srcLists.append( DCIP.SrcDipole( Rx, tx) )
+    
+    survey = DCIP.SurveyDC(srcLists)  
             
-            # Check for data + uncertainties
-            if temp.shape[1]==8:
-                d.append(temp[:,6])
-                wd.append(temp[:,7])
-                
-            # Check for data only    
-            elif temp.shape[1]==7:
-                d.append(temp[:,6])
-            
-    return Tx, Rx, d, wd
+    return {'DCsurvey':survey}
 
 def readUBC_DC2DLoc(fileName):
 
