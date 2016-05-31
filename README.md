@@ -1,9 +1,9 @@
-MOVED TO SimPEG.DCIP
-====================
+MOVED TO SimPEG.EM.Statics.DC
+=============================
 
 The latest work will be on the dcip/dev branch:
 
-https://github.com/simpeg/simpeg/tree/dcip/dev
+https://github.com/simpeg/simpeg
 
 
 simpegdc
